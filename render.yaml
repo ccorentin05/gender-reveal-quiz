@@ -1,0 +1,15 @@
+# Déploiement Render (Blueprint) – un seul service web Node.js
+services:
+  - type: web
+    name: gender-reveal-quiz
+    runtime: node
+    plan: starter            # instance toujours allumée ; "free" possible mais se met en veille
+    region: frankfurt
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_VERSION
+        value: "20"
+      - key: HOST_KEY        # clé de l'écran animateur : choisie à la création
+        sync: false

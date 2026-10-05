@@ -1,0 +1,58 @@
+@import url('/fonts/fonts.css');
+
+/* Palette reprise de l'affiche */
+:root {
+  --paper: #fffdfb;
+  --card: #fbf5ef;
+  --line: #dcc1aa;
+  --brown: #9a5a26;      /* "Gender Reveal" */
+  --ink: #5e3b20;        /* texte courant */
+  --muted: #a88b74;
+  --rose: #c47f8c;       /* "Girl" / Manon */
+  --blue: #4f7f9a;       /* "Boy" / Benjamin */
+  --mustard: #a88a1f;    /* "or" */
+  --caramel: #b07a4a;
+  --w-rose: #f7d9dc;     /* lavis aquarelle */
+  --w-blue: #d5ebf1;
+  --w-yellow: #f8ebb0;
+  --w-caramel: #efdcc6;
+  --script: 'Kaushan Script', 'Brush Script MT', cursive;
+  --sans: 'Josefin Sans', 'Century Gothic', 'Futura', system-ui, sans-serif;
+}
+
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--sans);
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+}
+button { font-family: inherit; cursor: pointer; }
+button:focus-visible, input:focus-visible { outline: 3px solid var(--mustard); outline-offset: 3px; }
+.hidden { display: none !important; }
+.script { font-family: var(--script); font-weight: 400; }
+.caps { text-transform: uppercase; letter-spacing: .22em; }
+
+/* Choix : lavis + couleur d'accent + motif */
+.c0 { --w: var(--w-rose);    --c: var(--rose); }
+.c1 { --w: var(--w-blue);    --c: var(--blue); }
+.c2 { --w: var(--w-yellow);  --c: var(--mustard); }
+.c3 { --w: var(--w-caramel); --c: var(--caramel); }
+.wash {
+  background:
+    radial-gradient(ellipse at 22% 28%, rgba(255,255,255,.75), transparent 55%),
+    radial-gradient(ellipse at 80% 85%, rgba(255,255,255,.45), transparent 50%),
+    var(--w);
+}
+.shape::before { content: '♥'; color: var(--c); }
+.c1 .shape::before, .c1.shape::before { content: '★'; }
+.c2 .shape::before, .c2.shape::before { content: '●'; }
+.c3 .shape::before, .c3.shape::before { content: '◆'; }
+
+#confetti { position: fixed; inset: 0; pointer-events: none; z-index: 50; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+}

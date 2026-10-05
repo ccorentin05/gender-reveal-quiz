@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#fffdfb">
+<title>Quiz Manon & Benjamin</title>
+<link rel="stylesheet" href="/style.css">
+<style>
+  body { min-height: 100dvh; display: flex; flex-direction: column; padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom); overscroll-behavior: none; user-select: none; position: relative; overflow-x: hidden; }
+  .deco { position: fixed; pointer-events: none; z-index: 0; opacity: .55; }
+  .deco.b1 { width: 110px; right: -24px; top: 60px; }
+  .deco.s1 { width: 34px; left: 18px; bottom: 30px; }
+  body:has(main.answer) .deco { display: none; }
+  header { position: relative; z-index: 1; display: flex; justify-content: space-between; align-items: center; padding: 14px 18px 10px; font-size: 14px; letter-spacing: .18em; text-transform: uppercase; border-bottom: 1px solid var(--line); }
+  header .sc { color: var(--mustard); font-weight: 700; }
+  main { position: relative; z-index: 1; flex: 1; display: flex; flex-direction: column; justify-content: center; padding: 22px; text-align: center; }
+  h1 { font-family: var(--script); font-weight: 400; color: var(--brown); font-size: 36px; margin: 0 0 10px; line-height: 1.15; }
+  p { font-size: 18px; margin: 0 0 12px; line-height: 1.45; }
+  .hint { font-size: 13px; letter-spacing: .2em; text-transform: uppercase; color: var(--muted); }
+  .pic { height: 92px; margin: 0 auto 10px; display: block; }
+  .names { width: 78%; max-width: 320px; margin: 0 auto 4px; display: block; }
+
+  form { display: flex; flex-direction: column; gap: 14px; margin-top: 18px; }
+  input { font: inherit; font-size: 22px; padding: 16px 18px 13px; border-radius: 16px; border: 2px solid var(--line); background: #fff; color: var(--ink); text-align: center; }
+  .cta { font-size: 17px; letter-spacing: .2em; text-transform: uppercase; font-weight: 700; padding: 19px 18px 16px; border: 0; border-radius: 16px; background: var(--brown); color: var(--paper); }
+  .cta:disabled { opacity: .5; }
+  .err { color: var(--rose); min-height: 22px; font-size: 15px; }
+
+  .qnum { font-size: 13px; letter-spacing: .2em; text-transform: uppercase; color: var(--muted); margin-bottom: 12px; display: flex; justify-content: space-between; }
+  .qnum strong { color: var(--brown); font-size: 16px; }
+  .btns { flex: 1; display: grid; gap: 12px; grid-template-columns: 1fr 1fr; grid-auto-rows: 1fr; }
+  .btns.two { grid-template-columns: 1fr; }
+  .btns button { border: 2px solid var(--line); border-radius: 26px 20px 28px 22px; color: var(--ink); font-size: 21px; font-weight: 600; padding: 14px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; transition: transform .1s; min-height: 110px; }
+  .btns.two button { font-family: var(--script); font-weight: 400; font-size: 44px; color: var(--c); }
+  .btns.two .shape { display: none; }
+  .btns button:active { transform: scale(.96); }
+  .btns .shape { font-size: 28px; }
+  main.answer { padding: 14px; }
+
+  .chosen { display: inline-flex; align-items: center; gap: 10px; padding: 12px 22px 10px; border-radius: 16px; border: 2px solid var(--line); font-size: 21px; font-weight: 600; margin: 6px auto 16px; }
+  .result { border-radius: 28px 22px 30px 24px; border: 2px solid var(--line); padding: 26px 20px 20px; margin-bottom: 16px; }
+  .result h1 { font-size: 38px; }
+  .result p { margin: 0; }
+  .pts { font-size: 46px; font-weight: 700; color: var(--brown); margin: 4px 0; }
+  .rank { font-size: 15px; letter-spacing: .16em; text-transform: uppercase; }
+  .rank strong { color: var(--brown); }
+</style>
+</head>
+<body>
+<img class="deco b1" src="/img/balloon-teal.png" alt=""><img class="deco s1" src="/img/star-2.png" alt="">
+<header class="hidden" id="hdr"><span id="hName"></span><span class="sc" id="hScore"></span></header>
+<main id="main"></main>
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="/common.js"></script>
+<script>
+const { esc, $ } = Q;
+const KEY = 'gr-quiz-player';
+const socket = io();
+let me = JSON.parse(localStorage.getItem(KEY) || 'null'); // { playerId, name }
+let S = null;
+let lastKey = '';
+
+socket.on('connect', () => {
+  if (me) {
+    socket.emit('player:resume', { playerId: me.playerId }, (r) => {
+      if (!r.ok) { forget(); showJoin(); }
+    });
+  } else showJoin();
+});
+
+socket.on('player:kicked', () => { forget(); S = null; showJoin('La partie a été réinitialisée. Rejoins à nouveau !'); });
+socket.on('state', (s) => { Q.sync(s); S = s; render(); });
+
+function forget() { me = null; localStorage.removeItem(KEY); lastKey = ''; $('#hdr').classList.add('hidden'); }
+
+function showJoin(msg = '') {
+  Q.stopCountdown();
+  lastKey = 'join';
+  $('#main').className = '';
+  $('#main').innerHTML = `
+    <img class="names" src="/img/cloud-names.png" alt="Manon et Benjamin">
+    <h1>Le grand quiz du gender reveal</h1>
+    <p>${esc(msg) || 'Entre ton prénom pour jouer.'}</p>
+    <form id="f" autocomplete="off">
+      <input id="name" maxlength="20" placeholder="Ton prénom" autocapitalize="words" enterkeyhint="go" required>
+      <button class="cta" id="go">Rejoindre la partie</button>
+      <div class="err" id="err"></div>
+    </form>`;
+  $('#f').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const name = $('#name').value.trim();
+    if (!name) { $('#err').textContent = 'Entre ton prénom pour jouer.'; return; }
+    $('#go').disabled = true;
+    socket.emit('player:join', { name }, (r) => {
+      $('#go').disabled = false;
+      if (!r.ok) { $('#err').textContent = r.error; return; }
+      me = { playerId: r.playerId, name: r.name };
+      localStorage.setItem(KEY, JSON.stringify(me));
+      lastKey = '';
+      if (S) render();
+    });
+  });
+}
+
+function screen(html, cls = '') {
+  const m = $('#main');
+  m.className = cls;
+  m.innerHTML = html;
+}
+
+function render() {
+  if (!me || !S) return;
+  const s = S, q = s.question;
+  $('#hdr').classList.remove('hidden');
+  $('#hName').textContent = s.me.name;
+  $('#hScore').textContent = s.me.role ? (s.me.role === 'manon' ? 'Future maman' : 'Futur papa') : `${s.me.score} pts`;
+
+  // Ne reconstruit l'écran que si quelque chose de visible change
+  const key = [s.phase, q?.id, s.canAnswer, s.myAnswer, s.late, s.me.rank, s.me.role, s.spectator].join('|');
+  if (key === lastKey) return;
+  lastKey = key;
+  Q.stopCountdown();
+  Q.clearConfetti();
+
+  const final = q?.part === 'final';
+  const chosen = () => s.myAnswer != null
+    ? `<div><span class="chosen wash c${s.myAnswer}"><span class="shape"></span>${esc(q.choices[s.myAnswer])}</span></div>` : '';
+
+  // Manon / Benjamin : spectateurs en partie 1 et sur la question finale
+  if (s.spectator && ['intro', 'question', 'locked', 'answer', 'leaderboard'].includes(s.phase)) {
+    return screen(`<img class="pic" src="/img/balloon-pink.png" alt=""><h1>Vous regardez</h1><p>Les invités répondent à des questions sur vous. Vous jouerez à la partie 2.</p>`);
+  }
+  if (s.me.role && ['podium', 'winner'].includes(s.phase)) {
+    return screen(`<img class="pic" src="/img/star-2.png" alt=""><h1>Le podium</h1><p>Bientôt votre tour : la partie 2 arrive.</p>`);
+  }
+
+  switch (s.phase) {
+    case 'lobby':
+      if (s.me.role) return screen(`<img class="pic" src="/img/balloon-pink.png" alt=""><h1>Bienvenue ${esc(s.me.name)} !</h1><p>Tu joues la partie 2 : tes réponses seront dévoilées à côté de celles des invités.</p>`);
+      return screen(`<img class="pic" src="/img/balloon-pink.png" alt=""><h1>C’est bon, ${esc(s.me.name)} !</h1><p>Regarde la TV, le quiz va bientôt commencer.</p>`);
+
+    case 'intro':
+      return screen(`<img class="pic" src="/img/star-2.png" alt=""><h1>${q.part === 'final' ? 'Question finale' : `Question ${q.number}`}</h1><p>Lis la question sur la TV, les réponses arrivent…</p>`);
+
+    case 'question':
+      if (s.late) return screen(`<img class="pic" src="/img/bal-yellow.png" alt=""><h1>Bienvenue !</h1><p>Tu joueras dès la prochaine question.</p>`);
+      if (s.canAnswer) {
+        screen(`
+          <div class="qnum"><span>${q.part === 'final' ? 'Question finale' : `Question <strong>${q.number}</strong> sur ${q.total}`}</span><span><strong id="t">20</strong> s</span></div>
+          <div class="btns ${q.choices.length === 2 ? 'two' : ''}">
+            ${q.choices.map((c, i) => `<button class="wash c${i}" data-i="${i}"><span class="shape" aria-hidden="true"></span>${esc(c)}</button>`).join('')}
+          </div>`, 'answer');
+        document.querySelectorAll('.btns button').forEach((b) => b.addEventListener('click', () => answer(Number(b.dataset.i))));
+        Q.countdown(s.endsAt, 20000, (ms) => { const t = $('#t'); if (t) t.textContent = Math.ceil(ms / 1000); });
+        return;
+      }
+      return screen(`<img class="pic" src="/img/star-1.png" alt=""><h1>Réponse envoyée</h1>${chosen()}<p>On attend les autres…</p>`);
+
+    case 'locked':
+      if (s.late) return screen(`<img class="pic" src="/img/bal-yellow.png" alt=""><h1>Bienvenue !</h1><p>Tu joueras dès la prochaine question.</p>`);
+      return s.myAnswer != null
+        ? screen(`<img class="pic" src="/img/star-blue.png" alt=""><h1>Temps écoulé</h1>${chosen()}<p>Résultat sur la TV dans un instant.</p>`)
+        : screen(`<img class="pic" src="/img/bal-pink.png" alt=""><h1>Trop tard !</h1><p>Pas de réponse pour cette question.</p>`);
+
+    case 'answer':
+    case 'leaderboard':
+      if (q.part === 1 && s.result) {
+        const r = s.result;
+        return screen(`
+          <div class="result wash ${r.correct ? 'c1' : 'c0'}">
+            <h1>${r.correct ? 'Bonne réponse !' : r.answered ? 'Raté !' : 'Pas de réponse'}</h1>
+            ${r.correct ? `<div class="pts">+${r.points}</div>` : `<p>La bonne réponse : ${esc(r.correctLabel)}</p>`}
+          </div>
+          <p class="rank">Tu es <strong>${Q.ordinal(s.me.rank)}</strong> sur ${s.me.total}</p>`);
+      }
+      return screen(`<img class="pic" src="/img/${final ? 'bal-yellow' : 'star-blue'}.png" alt=""><h1>${s.myAnswer != null ? 'Vote enregistré' : 'Résultat'}</h1>${chosen()}<p>${s.me.role ? 'Ta réponse est dévoilée sur la TV, à côté de celle des invités.' : 'Regarde le verdict sur la TV.'}</p>`);
+
+    case 'podium':
+      return screen(`<img class="pic" src="/img/star-2.png" alt=""><h1>Le podium arrive…</h1><p>Tu termines ${Q.ordinal(s.me.rank)} sur ${s.me.total} avec ${s.me.score} points.</p>`);
+
+    case 'winner':
+      if (s.me.rank === 1) { Q.confetti(6000); return screen(`<img class="pic" src="/img/star-2.png" alt=""><h1>Tu as gagné !</h1><p>Bravo ${esc(s.me.name)}, ${s.me.score} points.</p>`); }
+      return screen(`<img class="pic" src="/img/balloon-pink.png" alt=""><h1>Bravo au gagnant !</h1><p>Tu termines ${Q.ordinal(s.me.rank)} sur ${s.me.total}.</p>`);
+
+    case 'part2intro':
+      return screen(`<img class="pic" src="/img/balloon-teal.png" alt=""><h1>Partie 2</h1><p>Manon ou Benjamin ? Pas de points, juste ton pronostic.</p>`);
+
+    case 'recap':
+      return screen(`<img class="pic" src="/img/bal-pink.png" alt=""><h1>Le verdict</h1><p>Regarde la TV… et prépare-toi pour la question finale !</p>`);
+  }
+}
+
+function answer(i) {
+  document.querySelectorAll('.btns button').forEach((b) => (b.disabled = true));
+  if (navigator.vibrate) navigator.vibrate(40);
+  socket.emit('player:answer', { choice: i }, () => {});
+}
+</script>
+</body>
+</html>

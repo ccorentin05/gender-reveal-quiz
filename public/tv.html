@@ -1,0 +1,489 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gender reveal – Manon & Benjamin</title>
+<link rel="stylesheet" href="/style.css">
+<style>
+  body { overflow: hidden; }
+
+  /* Décor aquarelle (éléments découpés dans l'affiche) */
+  .decor img { position: fixed; pointer-events: none; z-index: 0; transition: opacity .8s, transform .8s; }
+  .d-pink   { height: 34vh; left: -1vw; top: -2vh; animation: float 9s ease-in-out infinite; }
+  .d-teal   { height: 36vh; right: 0; bottom: -4vh; animation: float 11s ease-in-out infinite reverse; }
+  .d-yellow { height: 10vh; left: 2.5vw; top: 52vh; animation: float 7s ease-in-out infinite; }
+  .d-rose   { height: 11vh; right: 13vw; top: 2vh; animation: float 8s ease-in-out infinite reverse; }
+  .d-cloud  { height: 20vh; left: -2vw; bottom: -3vh; opacity: .8; }
+  .d-s1 { height: 5vh; left: 21vw; top: 24vh; } .d-s2 { height: 6vh; right: 4vw; top: 40vh; }
+  .d-s3 { height: 7vh; right: 26vw; bottom: 6vh; }
+  @keyframes float { 50% { transform: translateY(-1.6vh) rotate(1deg); } }
+  body.dense .decor img { opacity: .35; }
+  body.dense .d-pink { transform: translate(-6vw, -8vh) scale(.75); }
+  body.dense .d-teal { transform: translate(8vw, 12vh) scale(.6); }
+  body.lobby .decor { display: none; }
+
+  .stage { position: fixed; inset: 0; z-index: 1; display: flex; flex-direction: column; padding: 3vh 5vw; }
+  .top { position: relative; height: 9vh; display: flex; justify-content: center; align-items: center; }
+  .mini-qr { position: absolute; right: 0; top: 0; display: flex; align-items: center; gap: .8vw; background: #fff; border: 1px solid var(--line); padding: .6vw .8vw; border-radius: 1vw; font-size: .95vw; color: var(--muted); }
+  .mini-qr img { width: 6vw; height: 6vw; }
+  .main { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; min-height: 0; }
+
+  /* Bandeau façon "SAMEDI — 31 — 15 HEURES" */
+  .ribbon { display: grid; grid-template-columns: 9vw auto auto auto 9vw; align-items: center; gap: 1.6vw; color: var(--brown); }
+  .ribbon hr { border: 0; border-top: 2px solid var(--line); margin: 0; }
+  .ribbon .lbl { font-size: 1.3vw; letter-spacing: .22em; text-transform: uppercase; color: var(--ink); }
+  .ribbon .n { font-size: 4.4vw; font-weight: 700; line-height: 1; }
+
+  /* Bouton d'activation du son (obligatoire pour les navigateurs) */
+  .sound-btn { position: fixed; right: 2vw; bottom: 3vh; z-index: 60; font-family: var(--sans); font-size: 1.1vw; letter-spacing: .14em; text-transform: uppercase; font-weight: 700; padding: 1.2vh 1.4vw 1vh; border-radius: 99px; border: 2px solid var(--brown); background: var(--paper); color: var(--brown); animation: pulse 2s ease-in-out infinite; }
+  @keyframes pulse { 50% { transform: scale(1.06); } }
+
+  /* Accueil */
+  .lobby-wrap { display: grid; grid-template-columns: auto 1fr; gap: 5vw; align-items: center; height: 100%; width: 100%; }
+  .poster { height: 92vh; border-radius: 1vw; box-shadow: 0 1.5vh 5vh rgba(154,90,38,.18); }
+  .join { text-align: center; }
+  .join h1 { font-family: var(--script); font-weight: 400; color: var(--brown); font-size: 5vw; margin: 0 0 3vh; line-height: 1.1; }
+  .qr { display: inline-block; background: #fff; padding: 1.4vw; border: 2px solid var(--line); border-radius: 2vw; }
+  .qr img { width: 24vw; display: block; }
+  .url { font-size: 1.15vw; letter-spacing: .18em; text-transform: uppercase; color: var(--blue); margin: 2.5vh 0 4vh; }
+  .count { font-size: 1.5vw; letter-spacing: .2em; text-transform: uppercase; color: var(--brown); margin: 0 0 2vh; font-weight: 600; }
+  .chips { display: flex; flex-wrap: wrap; justify-content: center; gap: .8vw; max-height: 22vh; overflow: hidden; }
+  .chip { padding: .7vh 1.3vw; border-radius: 99px; font-size: 1.4vw; font-weight: 600; color: var(--ink); animation: pop .4s ease-out; }
+  @keyframes pop { from { transform: scale(.4); opacity: 0; } }
+
+  /* Question */
+  .qtext { font-size: 3.4vw; font-weight: 600; text-align: center; line-height: 1.2; max-width: 74vw; margin: 0 0 3.5vh; text-wrap: balance; color: var(--ink); }
+  .intro { text-align: center; }
+  .intro .qtext { font-size: 4.4vw; }
+  .hint { font-size: 1.4vw; letter-spacing: .22em; text-transform: uppercase; color: var(--muted); }
+  .mid { display: flex; align-items: center; gap: 3.5vw; margin-bottom: 3.5vh; }
+  .timer { position: relative; width: 10vw; height: 10vw; }
+  .timer svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+  .timer circle { fill: none; stroke-width: 7; }
+  .timer .trk { stroke: var(--card); }
+  .timer .arc { stroke: var(--brown); stroke-linecap: round; transition: stroke .3s; }
+  .timer .arc.warn { stroke: var(--rose); }
+  .timer .num { position: absolute; inset: 0; display: grid; place-items: center; font-size: 3.6vw; font-weight: 700; color: var(--brown); padding-top: .4vw; }
+  .answered { font-size: 1.3vw; letter-spacing: .2em; text-transform: uppercase; color: var(--muted); }
+  .answered strong { display: block; color: var(--brown); font-size: 3.4vw; letter-spacing: 0; }
+  .timesup { font-family: var(--script); font-size: 3vw; color: var(--rose); }
+
+  .tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 1.6vw; width: 74vw; }
+  .tile { position: relative; border-radius: 2.2vw 1.6vw 2.4vw 1.8vw; padding: 2.4vh 2.2vw; display: flex; align-items: center; gap: 1.5vw; font-size: 2.2vw; font-weight: 600; color: var(--ink); min-height: 12vh; overflow: hidden; transition: opacity .5s, transform .5s, box-shadow .5s; }
+  .tile .shape { font-size: 2.2vw; }
+  .tile .label { flex: 1; position: relative; z-index: 1; padding-top: .3vw; }
+  .tile .cnt { position: relative; z-index: 1; font-size: 2.4vw; font-weight: 700; color: var(--c); }
+  .tile .bar { position: absolute; inset: auto auto 0 0; height: .6vh; background: var(--c); width: 0; opacity: .6; transition: width 1.2s cubic-bezier(.2,.8,.2,1); }
+  .reveal .tile.wrong { opacity: .32; transform: scale(.97); }
+  .reveal .tile.right { box-shadow: 0 0 0 .3vw var(--brown); transform: scale(1.03); }
+  .reveal .tile.right .label::after { content: ' ✓'; color: var(--brown); }
+
+  .title { font-family: var(--script); font-weight: 400; color: var(--brown); font-size: 5vw; margin: 0 0 3vh; text-align: center; line-height: 1.1; }
+
+  /* Classement */
+  .board { width: 56vw; }
+  .row { display: grid; grid-template-columns: 4.5vw 3vw 1fr auto auto; align-items: center; gap: 1.2vw; background: #fff; border: 1px solid var(--line); border-radius: 1.2vw; padding: 1.2vh 1.8vw; margin-bottom: 1vh; font-size: 1.8vw; font-weight: 600; animation: slide .5s ease-out backwards; }
+  .row .rk { font-family: var(--script); font-weight: 400; color: var(--brown); font-size: 2.4vw; display: flex; align-items: center; gap: .4vw; }
+  .row .rk img { height: 2.6vh; }
+  .row .mv { font-size: 1.1vw; } .row .mv.up { color: var(--blue); } .row .mv.down { color: var(--rose); }
+  .row .gain { color: var(--mustard); font-size: 1.4vw; }
+  .row .sc { color: var(--brown); min-width: 7vw; text-align: right; }
+  .row.top1 { background: var(--w-yellow); } .row.top2 { background: var(--w-blue); } .row.top3 { background: var(--w-rose); }
+  @keyframes slide { from { transform: translateX(-4vw); opacity: 0; } }
+
+  /* Podium */
+  .podium { display: flex; align-items: flex-end; gap: 2vw; height: 62vh; }
+  .step { width: 19vw; display: flex; flex-direction: column; align-items: center; animation: rise 1.1s cubic-bezier(.2,.9,.3,1.15) backwards; }
+  .step .who { font-family: var(--script); font-size: 2.8vw; color: var(--brown); text-align: center; line-height: 1.1; }
+  .step .pts { font-size: 1.2vw; letter-spacing: .2em; text-transform: uppercase; color: var(--muted); margin: .6vh 0 1.6vh; }
+  .step .block { width: 100%; border-radius: 2vw 2vw .6vw .6vw; display: grid; place-items: center; font-size: 5vw; font-weight: 700; color: var(--c); border: 2px solid var(--line); }
+  .step .crown { height: 8vh; margin-bottom: 1vh; }
+  .step.p1 .block { height: 38vh; } .step.p1 { animation-delay: 2.2s; }
+  .step.p2 .block { height: 26vh; } .step.p2 { animation-delay: 1.2s; }
+  .step.p3 .block { height: 17vh; } .step.p3 { animation-delay: .2s; }
+  @keyframes rise { from { transform: translateY(70vh); opacity: 0; } }
+
+  .winner { text-align: center; }
+  .winner .lead { font-size: 1.6vw; letter-spacing: .24em; text-transform: uppercase; color: var(--ink); margin: 0; }
+  .winner .name { font-family: var(--script); font-size: 11vw; color: var(--brown); line-height: 1.15; margin: 1vh 0 2vh; animation: pop .9s cubic-bezier(.2,.9,.3,1.3); }
+  .winner .pts { font-size: 1.6vw; letter-spacing: .24em; text-transform: uppercase; color: var(--mustard); margin: 0; font-weight: 600; }
+  .winner .prize { display: inline-block; margin-top: 4vh; font-size: 1.8vw; padding: 1.4vh 2.4vw; border: 2px solid var(--line); border-radius: 1.4vw; background: #fff; }
+
+  /* "Manon ou Benjamin ?" façon "Boy or Girl?" */
+  .duo-title { font-family: var(--script); font-size: 6.4vw; text-align: center; line-height: 1.15; margin: 0 0 2vh; }
+  .duo-title .a { color: var(--rose); } .duo-title .o { color: var(--mustard); font-size: .8em; } .duo-title .b { color: var(--blue); }
+  .part { text-align: center; }
+  .part .cloud { height: 20vh; margin-bottom: 1vh; }
+  .part p { font-size: 1.9vw; max-width: 56vw; margin: 0 auto; line-height: 1.45; }
+  .part .hint { margin-top: 3vh; }
+
+  /* Curseur */
+  .slider { width: 72vw; }
+  .ends { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 3vh; }
+  .end { display: flex; flex-direction: column; transition: transform .6s; }
+  .end.r { align-items: flex-end; }
+  .end .nm { font-family: var(--script); font-size: 3.6vw; color: var(--c); line-height: 1.1; }
+  .end .pc { font-size: 5.4vw; font-weight: 700; line-height: 1; color: var(--ink); }
+  .end.win { transform: scale(1.12); } .end.l.win { transform-origin: left bottom; } .end.r.win { transform-origin: right bottom; }
+  .track { position: relative; height: 2.6vh; border-radius: 99px; border: 2px solid var(--line); background: linear-gradient(90deg, var(--w-rose), #fff 50%, var(--w-blue)); }
+  .knob { position: absolute; top: 50%; left: 50%; height: 11vh; transform: translate(-50%, -55%); filter: drop-shadow(0 .8vh 1.2vh rgba(154,90,38,.25)); transition: left 2.2s cubic-bezier(.3,1.35,.4,1); }
+  .votes { text-align: center; margin-top: 2.5vh; font-size: 1.3vw; letter-spacing: .22em; text-transform: uppercase; color: var(--muted); }
+  .sub { text-align: center; font-family: var(--script); font-size: 3vw; color: var(--brown); margin: 3vh 0 0; animation: pop .6s ease-out; }
+  .answer-final .duo-title { font-size: 4.6vw; margin-bottom: 1vh; }
+
+  /* Réponses de Manon et Benjamin sous la jauge */
+  .couple { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 2.5vw; margin-top: 3.5vh; }
+  .pcard { border: 2px solid var(--line); border-radius: 2vw 1.6vw 2.2vw 1.8vw; padding: 1.8vh 2vw 1.4vh; text-align: center; perspective: 60vw; }
+  .pcard .who { font-size: 1.1vw; letter-spacing: .22em; text-transform: uppercase; color: var(--ink); }
+  .pcard .ans { font-family: var(--script); font-size: 3.6vw; line-height: 1.2; color: var(--c); display: inline-block; }
+  .pcard .ans.hide { color: var(--muted); }
+  .pcard .ans.flip { animation: flip .7s cubic-bezier(.3,1.4,.5,1) backwards; }
+  .pcard.none .ans { font-family: var(--sans); font-size: 1.4vw; color: var(--muted); padding: 1.4vh 0; }
+  @keyframes flip { from { transform: rotateX(90deg); opacity: 0; } }
+  .verdict { text-align: center; font-family: var(--script); font-size: 3vw; color: var(--mustard); opacity: 0; transition: opacity .6s; min-width: 14vw; }
+  .verdict small { display: block; font-family: var(--sans); font-size: 1.05vw; letter-spacing: .2em; text-transform: uppercase; color: var(--muted); margin-top: .4vh; }
+  .verdict.on { opacity: 1; }
+  .cstatus { display: flex; gap: 1vw; margin-top: 1.2vh; }
+  .cstatus span { font-size: 1.05vw; letter-spacing: .15em; text-transform: uppercase; padding: .7vh 1vw .4vh; border-radius: 99px; border: 1px solid var(--line); color: var(--muted); }
+  .cstatus span.ok { color: var(--c); border-color: var(--c); }
+  .coupleRecap { display: flex; justify-content: center; gap: 2vw; margin-bottom: 4vh; }
+  .coupleRecap div { flex: 1; text-align: center; border: 2px solid var(--line); border-radius: 1.6vw; padding: 1.6vh 1vw 1.2vh; }
+  .coupleRecap strong { display: block; font-family: var(--script); font-weight: 400; font-size: 3vw; color: var(--brown); line-height: 1.2; }
+  .coupleRecap span { font-size: 1vw; letter-spacing: .18em; text-transform: uppercase; color: var(--ink); }
+
+  /* Récap */
+  .recap { width: 76vw; }
+  .bigsplit { display: flex; height: 11vh; border-radius: 99px; overflow: hidden; border: 2px solid var(--line); margin-bottom: 5vh; font-size: 2.4vw; font-weight: 700; }
+  .bigsplit div { display: flex; align-items: center; padding: 0 2.4vw; width: 50%; transition: width 1.8s cubic-bezier(.2,.8,.2,1); white-space: nowrap; color: var(--c); padding-top: .4vw; }
+  .bigsplit .b { justify-content: flex-end; }
+  .recap h3 { font-size: 1.3vw; letter-spacing: .22em; text-transform: uppercase; color: var(--muted); font-weight: 600; margin: 0 0 1.5vh; }
+  .tr { display: grid; grid-template-columns: 1fr 16vw 14vw; gap: 2vw; align-items: center; font-size: 1.6vw; padding: 1.4vh 0; border-top: 1px solid var(--line); }
+  .tr .mini { height: 1.2vh; border-radius: 99px; background: var(--w-blue); overflow: hidden; border: 1px solid var(--line); }
+  .tr .mini div { height: 100%; background: var(--rose); opacity: .7; }
+  .tr .who { font-weight: 700; text-align: right; }
+  .tr .tag { display: inline-block; font-size: 1vw; letter-spacing: .15em; text-transform: uppercase; background: var(--w-yellow); padding: .3vh .7vw; border-radius: 99px; margin-left: .5vw; vertical-align: middle; }
+</style>
+</head>
+<body class="lobby">
+<div class="decor" aria-hidden="true">
+  <img class="d-cloud" src="/img/cloud-blue.png" alt="">
+  <img class="d-pink" src="/img/balloon-pink.png" alt="">
+  <img class="d-teal" src="/img/balloon-teal.png" alt="">
+  <img class="d-yellow" src="/img/bal-yellow.png" alt="">
+  <img class="d-rose" src="/img/bal-pink.png" alt="">
+  <img class="d-s1" src="/img/star-1.png" alt="">
+  <img class="d-s2" src="/img/star-2.png" alt="">
+  <img class="d-s3" src="/img/star-blue.png" alt="">
+</div>
+
+<button class="sound-btn" id="soundBtn">🔈 Activer le son</button>
+<div class="stage">
+  <div class="top" id="top">
+    <div id="ribbon"></div>
+    <div class="mini-qr hidden" id="miniQr"><span>Rejoindre<br>la partie</span><img alt="QR code pour rejoindre"></div>
+  </div>
+  <div class="main" id="main"></div>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="/common.js"></script>
+<script src="/sound.js"></script>
+<script>
+const { esc, $ } = Q;
+const socket = io();
+let S = null;
+let lastKey = '';
+
+socket.on('connect', () => { socket.emit('tv:join'); if (Sound.isOn()) socket.emit('tv:audio', { on: true }); });
+
+// Le navigateur exige un clic avant de jouer du son
+function enableSound() {
+  Sound.unlock().then(() => {
+    $('#soundBtn').classList.add('hidden');
+    socket.emit('tv:audio', { on: true });
+    if (S) Sound.scene(S.phase, S.question);
+  });
+}
+$('#soundBtn').addEventListener('click', enableSound);
+document.addEventListener('keydown', () => { if (!Sound.isOn()) enableSound(); });
+socket.on('state', (s) => { Q.sync(s); S = s; render(); });
+
+const DENSE = ['question', 'locked', 'answer', 'leaderboard', 'recap'];
+
+function ribbon(q) {
+  if (!q) return '';
+  if (q.part === 'final') return `<div class="ribbon"><hr><span></span><span class="lbl">Question finale</span><span></span><hr></div>`;
+  return `<div class="ribbon"><hr><span class="lbl">Partie ${q.part}</span><span class="n">${q.number}</span><span class="lbl">sur ${q.total}</span><hr></div>`;
+}
+
+function render() {
+  const s = S, q = s.question;
+  const key = `${s.phase}:${q ? q.id : ''}`;
+  const changed = key !== lastKey;
+  lastKey = key;
+
+  document.body.className = s.phase === 'lobby' ? 'lobby' : DENSE.includes(s.phase) ? 'dense' : '';
+  $('#top').classList.toggle('hidden', s.phase === 'lobby');
+  $('#ribbon').innerHTML = ['intro', 'question', 'locked', 'answer'].includes(s.phase) ? ribbon(q) : '';
+  const mq = $('#miniQr');
+  mq.classList.toggle('hidden', s.phase === 'lobby' || !s.qr);
+  if (s.qr) mq.querySelector('img').src = s.qr;
+
+  if (s.audio) Sound.setVolume(s.audio.volume, s.audio.muted);
+  if (changed) Sound.scene(s.phase, q);
+  if (changed) { Q.stopCountdown(); Q.clearConfetti(); ['_fx1', '_fx2', '_fx3', '_fx4', '_fx5', '_fx6'].forEach((k) => clearTimeout(window[k])); build(s); }
+  update(s);
+}
+
+function tilesHtml(q, results) {
+  return `<div class="tiles">${q.choices.map((c, i) => `
+    <div class="tile wash c${i} ${q.correct != null ? (i === q.correct ? 'right' : 'wrong') : ''}">
+      <span class="shape" aria-hidden="true"></span>
+      <span class="label">${esc(c)}</span>
+      ${results ? `<span class="cnt">${results.counts[i]}</span><div class="bar" data-w="${results.total ? results.counts[i] / results.total * 100 : 0}"></div>` : ''}
+    </div>`).join('')}</div>`;
+}
+
+function duoTitle(a, b) {
+  return `<h1 class="duo-title"><span class="a">${esc(a)}</span> <span class="o">ou</span> <span class="b">${esc(b)}</span> ?</h1>`;
+}
+
+function build(s) {
+  const m = $('#main'), q = s.question;
+  m.classList.remove('answer-final');
+  switch (s.phase) {
+    case 'lobby':
+      m.innerHTML = `
+        <div class="lobby-wrap">
+          <img class="poster" src="/img/affiche.jpg" alt="Affiche du gender reveal de Manon et Benjamin">
+          <div class="join">
+            <h1>Scannez pour jouer !</h1>
+            <div class="qr"><img src="${s.qr}" alt="QR code pour rejoindre"></div>
+            <p class="url">${esc(s.joinUrl.replace(/^https?:\/\//, '').replace(/\/$/, ''))}</p>
+            <p class="count" id="count"></p>
+            <div class="chips" id="chips"></div>
+          </div>
+        </div>`;
+      break;
+
+    case 'intro':
+      m.innerHTML = q.part === 'final'
+        ? `<div class="intro">${duoTitle(q.choices[0], q.choices[1])}<p class="hint">Votre pronostic avant la révélation</p></div>`
+        : `<div class="intro"><h2 class="qtext">${esc(q.text)}</h2><p class="hint">Préparez vos téléphones…</p></div>`;
+      break;
+
+    case 'question':
+    case 'locked':
+      m.innerHTML = `
+        ${q.part === 'final' ? duoTitle(q.choices[0], q.choices[1]) : `<h2 class="qtext">${esc(q.text)}</h2>`}
+        <div class="mid">
+          <div class="timer"><svg viewBox="0 0 120 120"><circle class="trk" cx="60" cy="60" r="52"/><circle class="arc" id="arc" cx="60" cy="60" r="52" stroke-dasharray="326.7" stroke-dashoffset="0"/></svg><div class="num" id="num">20</div></div>
+          <div><div class="answered" id="answered"></div><div class="cstatus" id="cstatus"></div><div class="timesup ${s.phase === 'locked' ? '' : 'hidden'}">Temps écoulé !</div></div>
+        </div>
+        ${tilesHtml(q, null)}`;
+      if (s.phase === 'question') {
+        let lastSec = null;
+        Q.countdown(s.endsAt, s.duration, (ms, k) => {
+          const n = $('#num'), arc = $('#arc');
+          if (!n) return;
+          const sec = Math.ceil(ms / 1000);
+          if (sec !== lastSec && lastSec !== null && sec > 0 && sec <= 5) Sound.play('tick', true);
+          lastSec = sec;
+          n.textContent = Math.ceil(ms / 1000);
+          arc.style.strokeDashoffset = 326.7 * (1 - k);
+          arc.classList.toggle('warn', ms < 5000);
+        });
+      } else {
+        $('#num').textContent = '0';
+        $('#arc').style.strokeDashoffset = 326.7;
+      }
+      break;
+
+    case 'answer':
+      if (q.part === 1) {
+        m.innerHTML = `<h2 class="qtext">${esc(q.text)}</h2><div class="reveal">${tilesHtml(q, s.results)}</div>`;
+        requestAnimationFrame(() => requestAnimationFrame(() =>
+          document.querySelectorAll('.bar').forEach((b) => (b.style.width = b.dataset.w + '%'))));
+      } else {
+        buildSlider(m, q, s.results);
+      }
+      break;
+
+    case 'leaderboard':
+      m.innerHTML = `<div class="board"><h2 class="title">Classement</h2>${boardRows(s.leaderboard)}</div>`;
+      break;
+
+    case 'podium': {
+      const [a, b, c] = s.leaderboard;
+      const cls = { 1: 'c2', 2: 'c1', 3: 'c0' };
+      const step = (p, n) => p
+        ? `<div class="step p${n}">${n === 1 ? '<img class="crown" src="/img/star-2.png" alt="">' : ''}<div class="who">${esc(p.name)}</div><div class="pts">${p.score} pts</div><div class="block wash ${cls[n]}">${n}</div></div>`
+        : `<div class="step p${n}"></div>`;
+      m.innerHTML = `<h2 class="title">Le podium</h2><div class="podium">${step(b, 2)}${step(a, 1)}${step(c, 3)}</div>`;
+      window._fx1 = setTimeout(() => { Q.confetti(3500); Sound.play('fanfare'); }, 3100);
+      break;
+    }
+
+    case 'winner': {
+      const w = s.leaderboard[0];
+      m.innerHTML = w ? `<div class="winner">
+          <p class="lead">Et le grand gagnant est…</p>
+          <p class="name">${esc(w.name)}</p>
+          <p class="pts">${w.score} points</p>
+          ${s.prize ? `<div class="prize">🎁 ${esc(s.prize)}</div>` : ''}
+        </div>` : `<p class="title">Aucun joueur…</p>`;
+      if (w) Q.confetti(6000);
+      break;
+    }
+
+    case 'part2intro':
+      m.innerHTML = `<div class="part">
+        <p class="hint" style="margin:0 0 2vh">Partie 2</p>
+        ${duoTitle('Manon', 'Benjamin')}
+        <p>Plus de points, juste vos pronostics sur nos futurs jeunes parents. Votez pour celui ou celle qui vous semble le plus probable.</p>
+      </div>`;
+      break;
+
+    case 'recap': {
+      const r = s.recap;
+      m.innerHTML = `<div class="recap">
+        <h2 class="title">Le verdict des invités</h2>
+        <div class="bigsplit"><div class="m wash c0" id="sm">Manon ${r.avgLeft} %</div><div class="b wash c1" id="sb">${r.avgRight} % Benjamin</div></div>
+        ${r.couple ? `<div class="coupleRecap">
+          ${r.couple.both ? `<div><strong>${r.couple.agree} / ${r.couple.both}</strong><span>Manon et Benjamin d’accord</span></div>` : ''}
+          ${r.couple.manon ? `<div><strong>${r.couple.manon.same} / ${r.couple.manon.total}</strong><span>Manon pense comme les invités</span></div>` : ''}
+          ${r.couple.benjamin ? `<div><strong>${r.couple.benjamin.same} / ${r.couple.benjamin.total}</strong><span>Benjamin pense comme les invités</span></div>` : ''}
+        </div>` : ''}
+        <h3>Les questions les plus tranchées</h3>
+        ${r.tranchees.map((t) => `<div class="tr">
+            <span>${esc(t.text)}</span>
+            <div class="mini"><div style="width:${t.pctLeft}%"></div></div>
+            <span class="who" style="color:${t.pctLeft >= t.pctRight ? 'var(--rose)' : 'var(--blue)'}">${t.pctLeft >= t.pctRight ? 'Manon' : 'Benjamin'} ${t.max} %${t.max === 100 ? '<span class="tag">Unanime</span>' : t.max >= 90 ? '<span class="tag">90 %+</span>' : ''}</span>
+          </div>`).join('') || '<p class="votes">Pas encore de votes.</p>'}
+      </div>`;
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        $('#sm').style.width = Math.max(r.avgLeft, 14) + '%';
+        $('#sb').style.width = Math.max(r.avgRight, 14) + '%';
+      }));
+      break;
+    }
+  }
+}
+
+function buildSlider(m, q, r) {
+  const final = q.part === 'final';
+  m.classList.toggle('answer-final', final);
+  m.innerHTML = `
+    ${final ? duoTitle(r.left, r.right) : `<h2 class="qtext">${esc(q.text)}</h2>`}
+    <div class="slider">
+      <div class="ends">
+        <div class="end l c0"><span class="nm">${esc(r.left)}</span><span class="pc" id="pl">0 %</span></div>
+        <div class="end r c1"><span class="nm">${esc(r.right)}</span><span class="pc" id="pr">0 %</span></div>
+      </div>
+      <div class="track"><img class="knob" id="knob" src="/img/${final ? 'bal-yellow' : 'star-2'}.png" alt=""></div>
+      <p class="votes">${r.total ? `${r.total} vote${r.total > 1 ? 's' : ''}` : 'Aucun vote'}</p>
+      ${coupleHtml(r)}
+      ${final ? '<p class="sub hidden" id="finalSub">Les invités ont parlé… place à la révélation !</p>' : ''}
+    </div>`;
+  // Le curseur penche vers le camp majoritaire
+  window._fx1 = setTimeout(() => {
+    final ? Sound.play('drumroll', 2.2) : Sound.play('slide');
+    $('#knob').style.left = r.pctRight + '%';
+    Q.countUp($('#pl'), r.pctLeft, 2000, ' %');
+    Q.countUp($('#pr'), r.pctRight, 2000, ' %');
+  }, 400);
+  window._fx2 = setTimeout(() => {
+    Sound.play(final ? 'cymbal' : 'land');
+    if (r.total && r.pctLeft !== r.pctRight) document.querySelector(r.pctLeft > r.pctRight ? '.end.l' : '.end.r').classList.add('win');
+  }, 2600);
+  // Suspense : on dévoile Manon, puis Benjamin, puis le verdict
+  const coupleDone = revealCouple(r);
+  if (final) {
+    window._fx6 = setTimeout(() => {
+      $('#finalSub')?.classList.remove('hidden');
+      Q.confetti(5000);
+      Sound.play('fanfare');
+    }, coupleDone ? coupleDone + 1200 : 2800);
+  }
+}
+
+function coupleHtml(r) {
+  const c = r.couple;
+  if (!c || (!c.manon && !c.benjamin)) return '';
+  const card = (role) => {
+    const x = c[role];
+    if (!x) return '<div></div>';
+    const none = x.choice == null;
+    return `<div class="pcard wash c${role === 'manon' ? 0 : 1} ${none ? 'none' : ''}">
+      <div class="who">Pour ${esc(x.name)}</div>
+      <div class="ans hide" data-role="${role}">${none ? 'Pas de réponse' : '?'}</div></div>`;
+  };
+  return `<div class="couple">${card('manon')}<div class="verdict" id="verdict"></div>${card('benjamin')}</div>`;
+}
+
+function revealCouple(r) {
+  const c = r.couple;
+  if (!c || (!c.manon && !c.benjamin)) return 0;
+  const show = (role, delay) => setTimeout(() => {
+    const el = document.querySelector(`.ans[data-role="${role}"]`);
+    if (!el || c[role].choice == null) return;
+    el.textContent = c[role].choice === 0 ? r.left : r.right;
+    el.className = `ans flip c${c[role].choice}`;
+    Sound.play('pop');
+  }, delay);
+  window._fx3 = show('manon', 3200);
+  window._fx4 = show('benjamin', 4400);
+  window._fx5 = setTimeout(() => {
+    const v = $('#verdict');
+    const m = c.manon?.choice, b = c.benjamin?.choice;
+    if (!v || m == null || b == null) return;
+    const guests = r.majority;
+    let sub = '';
+    if (guests != null) sub = m === b ? (m === guests ? 'comme les invités' : 'contre les invités') : 'les invités pensent comme ' + (guests === m ? c.manon.name : c.benjamin.name);
+    v.innerHTML = `${m === b ? 'D’accord !' : 'Pas d’accord !'}${sub ? `<small>${esc(sub)}</small>` : ''}`;
+    v.classList.add('on');
+    Sound.play(m === b ? 'agree' : 'disagree');
+  }, 5600);
+  return 5600;
+}
+
+function boardRows(list) {
+  if (!list.length) return '<p class="votes">Aucun joueur.</p>';
+  return list.map((p, i) => {
+    let mv = '';
+    if (p.prevRank && p.prevRank !== p.rank) mv = p.prevRank > p.rank ? `<span class="mv up">▲${p.prevRank - p.rank}</span>` : `<span class="mv down">▼${p.rank - p.prevRank}</span>`;
+    return `<div class="row ${p.rank <= 3 ? 'top' + p.rank : ''}" style="animation-delay:${i * 0.08}s">
+      <span class="rk">${p.rank}${p.rank === 1 ? '<img src="/img/star-1.png" alt="">' : ''}</span><span>${mv}</span><span>${esc(p.name)}</span>
+      <span class="gain">${p.gain ? '+' + p.gain : ''}</span><span class="sc">${p.score}</span></div>`;
+  }).join('');
+}
+
+// Parties qui bougent sans reconstruire la vue
+function update(s) {
+  if (s.phase === 'lobby') {
+    const chips = $('#chips');
+    if (!chips) return;
+    $('#count').textContent = s.players.length ? `${s.players.length} joueur${s.players.length > 1 ? 's' : ''} dans la partie` : 'En attente des joueurs…';
+    const have = new Set([...chips.children].map((c) => c.textContent));
+    const want = new Set(s.players);
+    [...chips.children].forEach((c) => { if (!want.has(c.textContent)) c.remove(); });
+    s.players.forEach((n) => {
+      if (have.has(n)) return;
+      const c = document.createElement('span');
+      c.className = `chip wash c${chips.children.length % 4}`;
+      c.textContent = n;
+      chips.appendChild(c);
+    });
+  }
+  if (s.phase === 'question' || s.phase === 'locked') {
+    const a = $('#answered');
+    if (a) a.innerHTML = `<strong>${s.answered} / ${s.expected}</strong>réponse${s.answered > 1 ? 's' : ''}`;
+    const cs = $('#cstatus');
+    if (cs) cs.innerHTML = s.couple ? ['manon', 'benjamin'].filter((r) => s.couple[r]).map((r, i) =>
+      `<span class="c${r === 'manon' ? 0 : 1} ${s.couple[r].answered ? 'ok' : ''}">${esc(s.couple[r].name)} ${s.couple[r].answered ? '✓' : '…'}</span>`).join('') : '';
+  }
+}
+</script>
+</body>
+</html>
