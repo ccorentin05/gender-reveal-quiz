@@ -123,46 +123,134 @@ window.Sound = (() => {
     }
   }
 
-  // ---------- Boucles musicales ----------
-  const C = [60, 64, 67], Am = [57, 60, 64], F = [53, 57, 60], G = [55, 59, 62], Em = [52, 55, 59], Dm = [50, 53, 57];
+  // ---------- Batterie & basse ----------
+  function kick(t, bus, gain = 0.5) {
+    const o = ctx.createOscillator(); o.type = 'sine';
+    o.frequency.setValueAtTime(140, t); o.frequency.exponentialRampToValueAtTime(42, t + 0.12);
+    const g = ctx.createGain(); env(g, t, gain, 0.002, 0.32);
+    o.connect(g); g.connect(bus); o.start(t); o.stop(t + 0.36);
+  }
+  function clap(t, bus, gain = 0.16) {
+    for (const d of [0, 0.011, 0.022]) noise(t + d, 0.09 + d, { gain: gain * (d ? 0.6 : 1), freq: 1300, q: 0.9, bus });
+    osc(190, t, 0.08, { type: 'triangle', gain: gain * 0.4, bus });
+  }
+  function hat(t, bus, gain = 0.05, open = false) { noise(t, open ? 0.18 : 0.035, { gain, type: 'highpass', freq: 8000, bus }); }
+  function bass(midi, t, dur, bus, gain = 0.16, cutoff = 520) {
+    osc(hz(midi), t, dur, { type: 'sawtooth', gain, bus, cutoff, attack: 0.004 });
+    osc(hz(midi - 12), t, dur, { type: 'sine', gain: gain * 0.9, bus, attack: 0.004 });
+  }
+  function lead(midi, t, dur, bus, gain = 0.05) {
+    osc(hz(midi), t, dur, { type: 'square', gain, bus, cutoff: 2600, attack: 0.004 });
+    osc(hz(midi), t, dur, { type: 'triangle', gain: gain * 0.8, bus, attack: 0.004, detune: 8 });
+  }
+  function chordStab(midis, t, bus, gain = 0.035, dur = 0.16) {
+    for (const m of midis) osc(hz(m), t, dur, { type: 'sawtooth', gain, bus, cutoff: 1800, attack: 0.003 });
+  }
+
+  // ---------- Boucles musicales (pas = double-croche) ----------
+  const C = [60, 64, 67], G = [55, 59, 62], Am = [57, 60, 64], F = [53, 57, 60], Em = [52, 55, 59], Dm = [50, 53, 57];
+  const Bb = [58, 62, 65], Gm = [55, 58, 62], A7 = [57, 61, 64];
+  const sixteenth = (bpm) => 60 / bpm / 4;
+  let urgent = false;
 
   const LOOPS = {
-    // Berceuse boîte à musique (accueil, gagnant)
-    lobby: {
-      step: 60 / 76 / 2,
+    // Accueil / gagnant : pop festive et entraînante
+    party: {
+      step: sixteenth(118),
       play(i, t, bus) {
-        const prog = [C, Am, F, G, C, Em, F, G];
-        const bar = Math.floor(i / 8) % prog.length, k = i % 8, ch = prog[bar];
-        if (k === 0) { pad(ch, t, 60 / 76 * 4 + 0.6, 0.022, bus); osc(hz(ch[0] - 12), t, 2.4, { gain: 0.06, bus }); }
-        const arp = [0, 1, 2, 3, 2, 1, 2, 3];
-        const n = arp[k] === 3 ? ch[0] + 12 : ch[arp[k]];
-        musicBox(n + 12, t, k % 2 ? 0.035 : 0.05, bus, 1.4);
-        if (k === 4 && bar % 2 === 1) musicBox(ch[2] + 24, t + 0.02, 0.02, bus, 1.2);
+        const prog = [C, G, Am, F], bar = Math.floor(i / 16) % 4, k = i % 16, ch = prog[bar];
+        if (k % 4 === 0) kick(t, bus, 0.42);
+        if (k === 4 || k === 12) clap(t, bus);
+        if (k % 4 === 2) hat(t, bus, 0.05, true); else if (k % 2 === 0) hat(t, bus, 0.025);
+        if (k % 2 === 0) bass(ch[0] - 12 + (k % 4 === 2 ? 12 : 0), t, 0.16, bus, 0.11);
+        if (k === 2 || k === 7 || k === 10) chordStab([ch[0] + 12, ch[1] + 12, ch[2] + 12], t, bus, 0.022);
+        const hook = [[0, 76], [3, 79], [6, 81], [8, 79], [11, 76], [14, 74]];
+        const shift = [0, -1, 0, -3][bar];
+        for (const [kk, m] of hook) if (k === kk) musicBox(m + 12 + shift, t, 0.045, bus, 0.9);
       },
     },
-    // Nappe calme (intro de question, classement, annonces)
-    calm: {
-      step: 60 / 66,
+    // Question affichée (partie 1) : petite pulsation qui fait monter l'attente
+    pulse: {
+      step: sixteenth(118),
       play(i, t, bus) {
-        const prog = [F, C, Dm, G];
-        const ch = prog[Math.floor(i / 4) % prog.length];
-        if (i % 4 === 0) pad([ch[0], ch[1], ch[2] + 12], t, 60 / 66 * 4 + 0.8, 0.02, bus);
-        if (i % 2 === 1) musicBox(ch[(i >> 1) % 3] + 24, t, 0.025, bus, 1.8);
+        const prog = [Am, F, C, G], k = i % 16, ch = prog[Math.floor(i / 16) % 4];
+        if (k === 0 || k === 8) kick(t, bus, 0.3);
+        if (k % 2 === 1) hat(t, bus, 0.02);
+        if (k % 4 === 2) bass(ch[0] - 12, t, 0.12, bus, 0.08, 380);
+        if (k === 0) pad([ch[0] + 12, ch[1] + 12, ch[2] + 12], t, sixteenth(118) * 16, 0.012, bus);
       },
     },
-    // Musique de réflexion pendant le chrono
+    // Chrono partie 1 : rythmé, s'emballe sur les 5 dernières secondes
     think: {
-      step: 60 / 116 / 2,
+      step: sixteenth(128),
       play(i, t, bus) {
-        const prog = [Am, F, C, G];
-        const ch = prog[Math.floor(i / 8) % prog.length], k = i % 8;
-        const pat = [0, 2, 1, 2, 0, 2, 1, 2];
-        pluck(ch[pat[k]] + 12, t, k % 2 ? 0.04 : 0.06, bus);
-        if (k === 0 || k === 4) osc(hz(ch[0] - 12), t, 0.4, { type: 'triangle', gain: 0.08, bus, cutoff: 600 });
-        if (k % 2 === 1) noise(t, 0.04, { gain: 0.025, type: 'highpass', freq: 7000, bus });
+        const prog = [Am, F, C, G], k = i % 16, ch = prog[Math.floor(i / 16) % 4];
+        if (k % 4 === 0) kick(t, bus, 0.42);
+        if (k === 4 || k === 12) clap(t, bus, 0.12);
+        hat(t, bus, k % 2 ? 0.02 : 0.035);
+        bass(ch[0] - 12 + (k % 8 === 6 ? 7 : 0), t, 0.1, bus, 0.09, 600);
+        const arp = [0, 1, 2, 1];
+        if (k % 2 === 0) pluck(ch[arp[(k / 2) % 4]] + 12, t, 0.035, bus);
+        if (urgent) {
+          clap(t, bus, k % 2 ? 0.05 : 0.08);
+          if (k % 2 === 0) lead(ch[2] + 24, t, 0.07, bus, 0.03);
+        }
+      },
+    },
+    // Chrono partie 2 : « duel » funky, Manon contre Benjamin
+    duel: {
+      step: sixteenth(112),
+      play(i, t, bus) {
+        const prog = [Dm, Bb, F, A7], k = i % 16, ch = prog[Math.floor(i / 16) % 4];
+        if (k === 0 || k === 6 || k === 10) kick(t, bus, 0.42);
+        if (k === 4 || k === 12) clap(t, bus, 0.15);
+        if (k % 2 === 0) hat(t, bus, k % 4 === 2 ? 0.045 : 0.025);
+        const bl = { 0: 0, 3: 0, 6: 12, 8: 7, 10: 0, 13: 10, 14: 12 };
+        if (k in bl) bass(ch[0] - 12 + bl[k], t, 0.13, bus, 0.12, 700);
+        if (k === 2 || k === 9 || k === 14) chordStab([ch[0] + 12, ch[1] + 12, ch[2] + 12], t, bus, 0.025, 0.1);
+        if (urgent && k % 2 === 1) hat(t, bus, 0.06, true);
+      },
+    },
+    // Chrono question finale : suspense, battements de cœur
+    heart: {
+      step: sixteenth(92),
+      play(i, t, bus) {
+        const prog = [Am, F, Dm, Em], k = i % 16, ch = prog[Math.floor(i / 16) % 4];
+        if (k === 0 || k === 3) kick(t, bus, k ? 0.3 : 0.45);
+        if (k === 8 || k === 11) kick(t, bus, k === 8 ? 0.45 : 0.3);
+        if (k === 0) pad([ch[0], ch[1] + 12, ch[2] + 12], t, sixteenth(92) * 16 + 0.3, 0.02, bus);
+        if (k % 4 === 2) musicBox(ch[(i >> 2) % 3] + 24, t, 0.03, bus, 1.4);
+        if (urgent) { hat(t, bus, 0.04); if (k % 2 === 0) clap(t, bus, 0.05); }
+      },
+    },
+    // Classement : groove de victoire
+    victory: {
+      step: sixteenth(122),
+      play(i, t, bus) {
+        const prog = [F, G, Em, Am], k = i % 16, ch = prog[Math.floor(i / 16) % 4];
+        if (k % 4 === 0) kick(t, bus, 0.4);
+        if (k === 4 || k === 12) clap(t, bus, 0.15);
+        if (k % 4 === 2) hat(t, bus, 0.05, true);
+        if (k % 4 === 0 || k % 4 === 3) bass(ch[0] - 12, t, 0.14, bus, 0.11);
+        if (k === 0 || k === 6 || k === 12) chordStab([ch[0] + 12, ch[1] + 12, ch[2] + 12], t, bus, 0.028, 0.22);
+        if (k === 14) lead(ch[2] + 24, t, 0.1, bus, 0.03);
+      },
+    },
+    // Annonces / récap : house douce
+    groove: {
+      step: sixteenth(110),
+      play(i, t, bus) {
+        const prog = [C, Am, F, G], k = i % 16, ch = prog[Math.floor(i / 16) % 4];
+        if (k % 4 === 0) kick(t, bus, 0.32);
+        if (k === 4 || k === 12) clap(t, bus, 0.09);
+        if (k % 4 === 2) hat(t, bus, 0.04, true);
+        if (k % 4 === 2) bass(ch[0] - 12, t, 0.18, bus, 0.09);
+        if (k === 0) pad([ch[0] + 12, ch[1] + 12, ch[2] + 12], t, sixteenth(110) * 16, 0.014, bus);
+        if (k % 4 === 3) musicBox(ch[(k >> 2) % 3] + 24, t, 0.025, bus, 1);
       },
     },
   };
+  LOOPS.lobby = LOOPS.party;
 
   function startLoop(name) {
     wantedLoop = name;
@@ -237,20 +325,26 @@ window.Sound = (() => {
     rise(n, t = now()) { musicBox([67, 72, 79][3 - n] || 72, t, 0.08); },
   };
 
-  // ---------- Ambiance par étape ----------
+  // ---------- Ambiance par étape (variantes selon l'écran) ----------
   function scene(phase, q) {
-    if (phase === 'lobby') return startLoop('lobby');
-    if (phase === 'intro') { startLoop('calm'); return play('whoosh'); }
-    if (phase === 'question') { startLoop('think'); return play('start'); }
+    urgent = false;
+    const part = q && q.part;
+    if (phase === 'lobby') return startLoop('party');
+    if (phase === 'intro') { startLoop(part === 'final' ? 'heart' : part === 2 ? 'groove' : 'pulse'); return play('whoosh'); }
+    if (phase === 'question') { startLoop(part === 'final' ? 'heart' : part === 2 ? 'duel' : 'think'); return play('start'); }
     if (phase === 'locked') { silence(); return play('timeUp'); }
-    if (phase === 'answer') { silence(); if (q && q.part === 1) play('reveal'); return; }
-    if (phase === 'leaderboard') { startLoop('calm'); return play('jingle'); }
+    if (phase === 'answer') { silence(); if (part === 1) play('reveal'); return; }
+    if (phase === 'leaderboard') { startLoop('victory'); return play('jingle'); }
     if (phase === 'podium') { silence(); return play('drumroll', 3.0); }
-    if (phase === 'winner') { silence(); play('fanfare'); setTimeout(() => startLoop('lobby'), 3500); return; }
-    if (phase === 'part2intro' || phase === 'recap') { startLoop('calm'); return play('jingle'); }
+    if (phase === 'winner') { silence(); play('fanfare'); setTimeout(() => startLoop('party'), 3000); return; }
+    if (phase === 'part2intro') { startLoop('duel'); return play('jingle'); }
+    if (phase === 'recap') { startLoop('groove'); return play('jingle'); }
   }
+
+  // Les 5 dernières secondes du chrono : la musique s'emballe
+  function setUrgent(on) { urgent = !!on; }
 
   function play(name, ...args) { if (ready() && fx[name]) fx[name](...args); }
 
-  return { unlock, setVolume, scene, play, isOn: () => ready() };
+  return { unlock, setVolume, scene, play, setUrgent, isOn: () => ready() };
 })();

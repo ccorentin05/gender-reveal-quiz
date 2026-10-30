@@ -40,12 +40,19 @@
   @keyframes pulse { 50% { transform: scale(1.06); } }
 
   /* Accueil */
-  .lobby-wrap { display: grid; grid-template-columns: auto 1fr; gap: 5vw; align-items: center; height: 100%; width: 100%; }
-  .poster { height: 92vh; border-radius: 1vw; box-shadow: 0 1.5vh 5vh rgba(154,90,38,.18); }
+  .lobby-wrap { display: grid; grid-template-columns: auto auto minmax(0, 1fr); gap: 2.5vw; align-items: center; height: 100%; width: 100%; }
+  .poster { height: 76vh; border-radius: 1vw; box-shadow: 0 1.5vh 5vh rgba(154,90,38,.18); transform: rotate(-1.5deg); }
+  /* Photo du couple façon polaroïd */
+  .polaroid { background: #fff; padding: 1.4vh 1.4vh 7vh; border-radius: .4vw; box-shadow: 0 1.5vh 5vh rgba(154,90,38,.22); transform: rotate(2.5deg); position: relative; animation: polaroid 1.2s cubic-bezier(.2,.9,.3,1.2) backwards .3s; }
+  .polaroid img { display: block; height: 58vh; aspect-ratio: 3 / 4; object-fit: cover; }
+  .polaroid figcaption { position: absolute; left: 0; right: 0; bottom: 1.4vh; text-align: center; font-family: var(--script); font-size: 2.6vw; line-height: 1; }
+  .polaroid figcaption .a { color: var(--rose); } .polaroid figcaption .o { color: var(--mustard); font-size: .75em; } .polaroid figcaption .b { color: var(--blue); }
+  .polaroid .tape { position: absolute; top: -2vh; left: 50%; width: 9vw; height: 4vh; transform: translateX(-50%) rotate(-4deg); background: rgba(248,235,176,.75); box-shadow: 0 .3vh .8vh rgba(0,0,0,.06); }
+  @keyframes polaroid { from { transform: rotate(14deg) translateY(30vh); opacity: 0; } }
   .join { text-align: center; }
-  .join h1 { font-family: var(--script); font-weight: 400; color: var(--brown); font-size: 5vw; margin: 0 0 3vh; line-height: 1.1; }
+  .join h1 { font-family: var(--script); font-weight: 400; color: var(--brown); font-size: 3.2vw; margin: 0 0 3vh; line-height: 1.1; }
   .qr { display: inline-block; background: #fff; padding: 1.4vw; border: 2px solid var(--line); border-radius: 2vw; }
-  .qr img { width: 24vw; display: block; }
+  .qr img { width: 17vw; display: block; }
   .url { font-size: 1.15vw; letter-spacing: .18em; text-transform: uppercase; color: var(--blue); margin: 2.5vh 0 4vh; }
   .count { font-size: 1.5vw; letter-spacing: .2em; text-transform: uppercase; color: var(--brown); margin: 0 0 2vh; font-weight: 600; }
   .chips { display: flex; flex-wrap: wrap; justify-content: center; gap: .8vw; max-height: 22vh; overflow: hidden; }
@@ -257,6 +264,7 @@ function build(s) {
       m.innerHTML = `
         <div class="lobby-wrap">
           <img class="poster" src="/img/affiche.jpg" alt="Affiche du gender reveal de Manon et Benjamin">
+          <figure class="polaroid"><span class="tape"></span><img src="/img/couple.webp" alt="Manon et Benjamin"><figcaption><span class="a">Manon</span> <span class="o">&amp;</span> <span class="b">Benjamin</span></figcaption></figure>
           <div class="join">
             <h1>Scannez pour jouer !</h1>
             <div class="qr"><img src="${s.qr}" alt="QR code pour rejoindre"></div>
@@ -289,6 +297,7 @@ function build(s) {
           if (!n) return;
           const sec = Math.ceil(ms / 1000);
           if (sec !== lastSec && lastSec !== null && sec > 0 && sec <= 5) Sound.play('tick', true);
+          if (sec <= 5 && sec > 0) Sound.setUrgent(true);
           lastSec = sec;
           n.textContent = Math.ceil(ms / 1000);
           arc.style.strokeDashoffset = 326.7 * (1 - k);
