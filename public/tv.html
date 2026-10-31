@@ -53,7 +53,12 @@
   .join h1 { font-family: var(--script); font-weight: 400; color: var(--brown); font-size: 3.2vw; margin: 0 0 3vh; line-height: 1.1; }
   .qr { display: inline-block; background: #fff; padding: 1.4vw; border: 2px solid var(--line); border-radius: 2vw; }
   .qr img { width: 17vw; display: block; }
-  .url { font-size: 1.15vw; letter-spacing: .18em; text-transform: uppercase; color: var(--blue); margin: 2.5vh 0 4vh; }
+  .url { font-size: 1.15vw; letter-spacing: .18em; text-transform: uppercase; color: var(--blue); margin: 2vh 0 2.5vh; }
+  /* Wi-Fi pour les invités */
+  .wifi { display: inline-grid; grid-template-columns: auto auto; gap: .4vh 1.2vw; text-align: left; align-items: baseline; padding: 1.4vh 1.6vw 1.1vh; margin: 0 0 3vh; border: 2px dashed var(--line); border-radius: 1.2vw; background: #fff; }
+  .wifi .t { grid-column: 1 / -1; font-size: 1vw; letter-spacing: .22em; text-transform: uppercase; color: var(--muted); }
+  .wifi .k { font-size: 1vw; letter-spacing: .18em; text-transform: uppercase; color: var(--ink); }
+  .wifi .v { font-size: 1.6vw; font-weight: 700; color: var(--brown); letter-spacing: .06em; }
   .count { font-size: 1.5vw; letter-spacing: .2em; text-transform: uppercase; color: var(--brown); margin: 0 0 2vh; font-weight: 600; }
   .chips { display: flex; flex-wrap: wrap; justify-content: center; gap: .8vw; max-height: 22vh; overflow: hidden; }
   .chip { padding: .7vh 1.3vw; border-radius: 99px; font-size: 1.4vw; font-weight: 600; color: var(--ink); animation: pop .4s ease-out; }
@@ -269,6 +274,7 @@ function build(s) {
             <h1>Scannez pour jouer !</h1>
             <div class="qr"><img src="${s.qr}" alt="QR code pour rejoindre"></div>
             <p class="url">${esc(s.joinUrl.replace(/^https?:\/\//, '').replace(/\/$/, ''))}</p>
+            <div class="wifi"><span class="t">Wi-Fi invités</span><span class="k">Réseau</span><span class="v">SFR-378F</span><span class="k">Mot de passe</span><span class="v">12345678</span></div>
             <p class="count" id="count"></p>
             <div class="chips" id="chips"></div>
           </div>
